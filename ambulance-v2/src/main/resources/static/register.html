@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register — MediRush</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="toast-wrap"></div>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-pulse">🚑</span>
+      <h1>MediRush</h1>
+      <p>Create Account</p>
+    </div>
+
+    <div id="reg-alert"></div>
+
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="r-name" placeholder="Your full name"/>
+    </div>
+    <div class="form-group">
+      <label>Email Address</label>
+      <input type="email" id="r-email" placeholder="you@example.com"/>
+    </div>
+    <div class="input-row">
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="r-phone" placeholder="+91 98765 43210"/>
+      </div>
+      <div class="form-group">
+        <label>Account Type</label>
+        <select id="r-role">
+          <option value="PATIENT">🏥 Patient</option>
+          <option value="DRIVER">🚑 Driver</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Password (min 6 chars)</label>
+      <input type="password" id="r-pass" placeholder="••••••••"/>
+    </div>
+    <button class="btn btn-primary" id="reg-btn" onclick="doRegister()">Create Account →</button>
+    <div class="auth-footer">Already have an account? <a href="login.html">Login here</a></div>
+  </div>
+</div>
+<script src="script.js"></script>
+<script>
+  function setAlert(msg, type='error') {
+    document.getElementById('reg-alert').innerHTML = msg
+      ? `<div class="alert alert-${type}">${msg}</div>` : '';
+  }
+
+  async function doRegister() {
+    const name  = document.getElementById('r-name').value.trim();
+    const email = document.getElementById('r-email').value.trim();
+    const phone = document.getElementById('r-phone').value.trim();
+    const role  = document.getElementById('r-role').value;
+    const pass  = document.getElementById('r-pass').value;
+
+    if (!name || !email || !pass) { setAlert('Name, email and password are required.'); return; }
+    if (pass.length < 6) { setAlert('Password must be at least 6 characters.'); return; }
+
+    const btn = document.getElementById('reg-btn');
+    btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> Creating…';
+
+    try {
+      const res  = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name,email,phone,password:pass,role}) });
+      const data = await res.json();
+      if (data.success) {
+        setAlert('✅ ' + data.message, 'success');
+        setTimeout(() => window.location.href = 'login.html', 1800);
+      } else {
+        setAlert('❌ ' + data.message);
+        btn.disabled = false; btn.innerHTML = 'Create Account →';
+      }
+    } catch(e) {
+      setAlert('❌ Server error. Please try again.');
+      btn.disabled = false; btn.innerHTML = 'Create Account →';
+    }
+  }
+
+  document.addEventListener('keydown', e => { if (e.key==='Enter') doRegister(); });
+</script>
+</body>
+</html>

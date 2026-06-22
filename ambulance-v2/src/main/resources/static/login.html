@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — MediRush</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="toast-wrap"></div>
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-pulse">🚑</span>
+      <h1>MediRush</h1>
+      <p>Smart Emergency Response System</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Login</button>
+      <button class="auth-tab" onclick="switchTab('demo')">Quick Demo</button>
+    </div>
+
+    <!-- Login -->
+    <div id="tab-login">
+      <div id="login-alert"></div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="l-email" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+      <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Login →</button>
+      <div class="auth-footer">No account? <a href="register.html">Register here</a></div>
+    </div>
+
+    <!-- Demo quick-login -->
+    <div id="tab-demo" class="hidden">
+      <div class="alert alert-info" style="margin-bottom:16px">
+        ℹ️ Click any account to log in instantly.
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="card" style="padding:14px;cursor:pointer;border-color:rgba(245,158,11,.45)" onclick="quick('admin@ambulance.com','admin123')">
+          <div class="flex-c gap-12">
+            <span style="font-size:28px">👑</span>
+            <div>
+              <div style="font-weight:700;color:var(--yellow);font-family:var(--fd);letter-spacing:1px">ADMIN</div>
+              <div class="text-sm text-muted">admin@ambulance.com / admin123</div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:14px;cursor:pointer;border-color:rgba(6,182,212,.45)" onclick="quick('driver1@ambulance.com','driver123')">
+          <div class="flex-c gap-12">
+            <span style="font-size:28px">🚑</span>
+            <div>
+              <div style="font-weight:700;color:var(--cyan);font-family:var(--fd);letter-spacing:1px">DRIVER — Rajan Kumar</div>
+              <div class="text-sm text-muted">driver1@ambulance.com / driver123</div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:14px;cursor:pointer;border-color:rgba(230,57,70,.45)" onclick="quick('patient1@ambulance.com','patient123')">
+          <div class="flex-c gap-12">
+            <span style="font-size:28px">🏥</span>
+            <div>
+              <div style="font-weight:700;color:var(--red);font-family:var(--fd);letter-spacing:1px">PATIENT — Priya Sharma</div>
+              <div class="text-sm text-muted">patient1@ambulance.com / patient123</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="script.js"></script>
+<script>
+  if (localStorage.getItem('amb_user')) window.location.href = 'dashboard.html';
+
+  function switchTab(t) {
+    document.getElementById('tab-login').classList.toggle('hidden', t !== 'login');
+    document.getElementById('tab-demo').classList.toggle('hidden', t !== 'demo');
+    document.querySelectorAll('.auth-tab').forEach((el,i) => {
+      el.classList.toggle('active', (i===0 && t==='login') || (i===1 && t==='demo'));
+    });
+  }
+
+  function setAlert(msg, type='error') {
+    document.getElementById('login-alert').innerHTML = msg
+      ? `<div class="alert alert-${type}">${msg}</div>` : '';
+  }
+
+  async function doLogin() {
+    const email = document.getElementById('l-email').value.trim();
+    const pass  = document.getElementById('l-pass').value;
+    if (!email || !pass) { setAlert('Please enter email and password.'); return; }
+
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Authenticating…';
+
+    try {
+      const res  = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password:pass}) });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem('amb_user', JSON.stringify(data));
+        toast('✅ Welcome back, ' + data.name + '!', 'success');
+        setTimeout(() => window.location.href = 'dashboard.html', 600);
+      } else {
+        setAlert('❌ ' + data.message);
+        btn.disabled = false; btn.innerHTML = 'Login →';
+      }
+    } catch(e) {
+      setAlert('❌ Server unreachable. Is Spring Boot running?');
+      btn.disabled = false; btn.innerHTML = 'Login →';
+    }
+  }
+
+  function quick(email, password) {
+    document.getElementById('l-email').value = email;
+    document.getElementById('l-pass').value  = password;
+    switchTab('login');
+    setTimeout(doLogin, 150);
+  }
+
+  document.addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+</script>
+</body>
+</html>

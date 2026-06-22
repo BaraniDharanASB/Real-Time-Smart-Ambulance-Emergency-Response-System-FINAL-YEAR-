@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — MediRush</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+<div id="toast-wrap"></div>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a class="nav-brand" href="#">
+    <span class="icon">🚑</span>
+    <span>MediRush</span>
+  </a>
+  <span class="nav-live">LIVE</span>
+  <div class="nav-spacer"></div>
+  <div class="nav-user">
+    <span class="pulse-dot">ONLINE</span>
+    <span class="nav-name" id="nav-name">—</span>
+    <span class="nav-role" id="nav-role">—</span>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<!-- LAYOUT -->
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main" id="main-content">
+    <div class="loading-block"><div class="spinner"></div> Loading dashboard…</div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TEMPLATES
+═══════════════════════════════════════════════════════════ -->
+
+<!-- ─── ADMIN: OVERVIEW ─── -->
+<template id="tpl-admin-overview">
+<div>
+  <div class="page-title">📊 Admin <span class="acc">Overview</span></div>
+  <div class="stats-grid">
+    <div class="stat-card s-blue"><div class="orb"></div><span class="stat-icon">👤</span><div class="stat-val" id="st-users">—</div><div class="stat-label">Total Users</div></div>
+    <div class="stat-card s-red"><div class="orb"></div><span class="stat-icon">🧑‍⚕️</span><div class="stat-val" id="st-patients">—</div><div class="stat-label">Patients</div></div>
+    <div class="stat-card s-cyan"><div class="orb"></div><span class="stat-icon">🚑</span><div class="stat-val" id="st-drivers">—</div><div class="stat-label">Drivers</div></div>
+    <div class="stat-card s-yel"><div class="orb"></div><span class="stat-icon">📋</span><div class="stat-val" id="st-requests">—</div><div class="stat-label">Requests</div></div>
+    <div class="stat-card s-green"><div class="orb"></div><span class="stat-icon">✅</span><div class="stat-val" id="st-avail">—</div><div class="stat-label">Available</div></div>
+    <div class="stat-card s-red"><div class="orb"></div><span class="stat-icon">🔴</span><div class="stat-val" id="st-busy">—</div><div class="stat-label">Busy</div></div>
+    <div class="stat-card"><div class="orb"></div><span class="stat-icon">⚫</span><div class="stat-val" id="st-offline">—</div><div class="stat-label">Offline</div></div>
+    <div class="stat-card s-pur"><div class="orb"></div><span class="stat-icon">🚐</span><div class="stat-val" id="st-total-amb">—</div><div class="stat-label">Ambulances</div></div>
+  </div>
+  <div class="card"><div class="card-head"><span class="dot"></span>Live Fleet Map</div><div id="map"></div></div>
+  <div class="card">
+    <div class="card-head"><span class="dot"></span>Recent Activity</div>
+    <div id="admin-logs-list" class="log-list"><div class="loading-block"><div class="spinner"></div> Loading…</div></div>
+  </div>
+</div>
+</template>
+
+<!-- ─── ADMIN: BOOKINGS ─── -->
+<template id="tpl-admin-bookings">
+<div>
+  <div class="page-title">📋 All <span class="acc">Bookings</span></div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Patient</th><th>Priority</th><th>Vehicle</th><th>Driver</th><th>Hospital</th><th>Dist</th><th>ETA</th><th>Status</th><th>Time</th></tr></thead>
+        <tbody id="bookings-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- ─── ADMIN: DRIVERS ─── -->
+<template id="tpl-admin-drivers">
+<div>
+  <div class="page-title">🚑 Drivers & <span class="acc">Fleet</span></div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Driver</th><th>Email</th><th>Phone</th><th>Vehicle</th><th>Status</th><th>Location</th></tr></thead>
+        <tbody id="drivers-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- ─── ADMIN: AMBULANCES ─── -->
+<template id="tpl-admin-ambulances">
+<div>
+  <div class="page-title">🚐 Ambulance <span class="acc">Fleet</span></div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Vehicle</th><th>Driver</th><th>Status</th><th>Latitude</th><th>Longitude</th><th>Updated</th></tr></thead>
+        <tbody id="amb-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- ─── ADMIN: USERS ─── -->
+<template id="tpl-admin-users">
+<div>
+  <div class="page-title">👥 All <span class="acc">Users</span></div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Role</th><th>Phone</th><th>Joined</th></tr></thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- ─── ADMIN: LOGS ─── -->
+<template id="tpl-admin-logs">
+<div>
+  <div class="page-title">📡 Activity <span class="acc">Logs</span></div>
+  <div class="card">
+    <div id="all-logs-list" class="log-list"><div class="loading-block"><div class="spinner"></div></div></div>
+  </div>
+</div>
+</template>
+
+<!-- ─── PATIENT: BOOK ─── -->
+<template id="tpl-patient-book">
+<div>
+  <div class="page-title">🆘 Book <span class="acc">Ambulance</span></div>
+
+  <!-- PANIC BUTTON -->
+  <div class="card" style="border-color:rgba(230,57,70,.4)">
+    <div class="card-head"><span class="dot"></span>Panic Button</div>
+    <p class="text-sm" style="color:var(--t2);margin-bottom:16px">One tap emergency — auto-detects location, sets HIGH priority, dispatches immediately.</p>
+    <button class="btn-panic" onclick="triggerPanic()">🚨 PANIC — SEND EMERGENCY NOW 🚨</button>
+  </div>
+
+  <!-- REGULAR BOOKING -->
+  <div class="card">
+    <div class="card-head"><span class="dot"></span>Emergency Request</div>
+
+    <div class="form-group">
+      <label>Your Location Address</label>
+      <input type="text" id="p-address" placeholder="e.g. Near Apollo Hospital, Salem"/>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+      <button class="btn btn-blue" onclick="detectLocation()" id="detect-btn">📡 Auto-Detect GPS</button>
+      <div id="gps-info" class="hidden" style="align-items:center;display:flex;gap:8px;font-size:13px;color:var(--green)">
+        <span class="pulse-dot"></span><span id="gps-text"></span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:18px">
+      <div class="form-group" style="margin-bottom:8px"><label>Emergency Priority</label></div>
+      <div class="priority-grid">
+        <div class="priority-opt" id="popt-HIGH" onclick="selectPriority('HIGH')">
+          <span class="p-icon">🔴</span><div class="p-name" style="color:var(--red)">High</div>
+          <div class="text-sm text-muted" style="margin-top:4px">Critical/Life-threatening</div>
+        </div>
+        <div class="priority-opt sel-MEDIUM" id="popt-MEDIUM" onclick="selectPriority('MEDIUM')">
+          <span class="p-icon">🟡</span><div class="p-name" style="color:var(--yellow)">Medium</div>
+          <div class="text-sm text-muted" style="margin-top:4px">Serious but stable</div>
+        </div>
+        <div class="priority-opt" id="popt-LOW" onclick="selectPriority('LOW')">
+          <span class="p-icon">🟢</span><div class="p-name" style="color:var(--green)">Low</div>
+          <div class="text-sm text-muted" style="margin-top:4px">Non-urgent transport</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nearest preview -->
+    <div id="nearest-section" class="hidden">
+      <div class="card-head" style="margin-bottom:12px"><span class="dot"></span>Nearest Available Ambulances</div>
+      <div id="amb-cards-wrap" class="amb-cards"></div>
+    </div>
+
+    <button class="btn btn-primary mt-16" id="book-btn" onclick="bookAmbulance()" disabled>
+      🚑 Request Ambulance
+    </button>
+
+    <div id="book-result"></div>
+  </div>
+
+  <!-- MAP -->
+  <div class="card">
+    <div class="card-head"><span class="dot"></span>Live Map</div>
+    <div class="map-legend">
+      <div class="map-leg-item"><div class="leg-dot leg-patient"></div> Your Location</div>
+      <div class="map-leg-item"><div class="leg-dot leg-ambulance"></div> Ambulance</div>
+      <div class="map-leg-item"><div class="leg-dot leg-hospital"></div> Hospital</div>
+    </div>
+    <div id="map"></div>
+  </div>
+</div>
+</template>
+
+<!-- ─── PATIENT: HISTORY ─── -->
+<template id="tpl-patient-history">
+<div>
+  <div class="page-title">📜 My <span class="acc">History</span></div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Priority</th><th>Vehicle</th><th>Driver</th><th>Hospital</th><th>Dist</th><th>ETA</th><th>Status</th><th>Time</th></tr></thead>
+        <tbody id="hist-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- ─── DRIVER: CONSOLE ─── -->
+<template id="tpl-driver-console">
+<div>
+  <div class="page-title">🚑 Driver <span class="acc">Console</span></div>
+
+  <!-- Vehicle info -->
+  <div class="card" id="drv-vehicle-card">
+    <div class="card-head"><span class="dot"></span>My Ambulance</div>
+    <div id="drv-vehicle-info"><div class="loading-block"><div class="spinner"></div></div></div>
+  </div>
+
+  <!-- Status update -->
+  <div class="card">
+    <div class="card-head"><span class="dot"></span>Update Status</div>
+    <div class="status-grid">
+      <div class="status-opt" id="so-AVAILABLE" onclick="setDriverStatus('AVAILABLE')">
+        <span class="so-icon">🟢</span><div class="so-label" style="color:var(--green)">Available</div>
+      </div>
+      <div class="status-opt" id="so-BUSY" onclick="setDriverStatus('BUSY')">
+        <span class="so-icon">🔴</span><div class="so-label" style="color:var(--red)">Busy</div>
+      </div>
+      <div class="status-opt" id="so-OFFLINE" onclick="setDriverStatus('OFFLINE')">
+        <span class="so-icon">⚫</span><div class="so-label" style="color:var(--t3)">Offline</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending request -->
+  <div class="card">
+    <div class="card-head"><span class="dot"></span>Incoming Request</div>
+    <div id="drv-pending-info"><div class="loading-block"><div class="spinner"></div> Checking…</div></div>
+  </div>
+
+  <!-- Active trip -->
+  <div class="card">
+    <div class="card-head"><span class="dot"></span>Active Trip</div>
+    <div id="drv-active-info"><div class="loading-block"><div class="spinner"></div> Checking…</div></div>
+  </div>
+
+  <!-- Map -->
+  <div class="card">
+    <div class="card-head"><span class="dot"></span>Route Map</div>
+    <div id="map"></div>
+  </div>
+</div>
+</template>
+
+<script src="script.js"></script>
+</body>
+</html>
